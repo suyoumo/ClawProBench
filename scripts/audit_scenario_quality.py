@@ -366,7 +366,7 @@ def _aggregate_proxy_for_model(
                 benchmark_core=scenario.benchmark_core,
                 trials=selected_scenario.trials,
                 avg_score=selected_scenario.avg_score,
-                max_score=selected_scenario.max_score,
+                max_score=getattr(selected_scenario, "max_score", selected_scenario.avg_score),
                 capability_score=selected_scenario.capability_score,
                 pass_rate=selected_scenario.pass_rate,
                 pass_at_k_any=selected_scenario.pass_at_k_any,

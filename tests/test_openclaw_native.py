@@ -365,6 +365,34 @@ class OpenClawNativeTests(unittest.TestCase):
         self.assertEqual(result["checkpoints"]["example_lists_are_correct"]["score"], 0.25)
         self.assertEqual(result["process_score"], 1.0)
 
+    def test_inventory_custom_check_handles_skills_inventory_timeout_without_crashing(self) -> None:
+        scenario = load_scenario(scenarios_root() / "tool_use" / "14_openclaw_skill_inventory_live.yaml")
+        with tempfile.TemporaryDirectory() as tmpdir, patch(
+            "harness.openclaw_native.load_skills_inventory",
+            side_effect=subprocess.TimeoutExpired(["openclaw", "skills", "list", "--json"], 30),
+        ):
+            Path(tmpdir, "skills_inventory_report.json").write_text(
+                """
+{"ready_count": 3, "missing_count": 3, "workspace_dir": "/Users/test/clawd", "managed_skills_dir": "/Users/test/.openclaw/skills", "ready_examples": ["feishu-calendar", "tmux", "weather"], "missing_examples": ["1password", "slack", "zeta"]}
+""".strip(),
+                encoding="utf-8",
+            )
+            result = run_custom_checks(
+                scenario,
+                Path(tmpdir),
+                _trace("openclaw skills list --json"),
+                [],
+            )
+        self.assertIsNotNone(result)
+        self.assertEqual(result["checkpoints"]["used_openclaw_skills_cli"]["score"], 0.2)
+        self.assertEqual(result["checkpoints"]["report_file_exists"]["score"], 0.1)
+        self.assertEqual(result["checkpoints"]["counts_are_correct"]["score"], 0.0)
+        self.assertEqual(result["checkpoints"]["paths_are_correct"]["score"], 0.0)
+        self.assertEqual(result["checkpoints"]["example_lists_are_correct"]["score"], 0.0)
+        self.assertIn("openclaw error", result["checkpoints"]["counts_are_correct"]["detail"])
+        self.assertIn("timed out after 30 seconds", result["checkpoints"]["counts_are_correct"]["detail"])
+        self.assertEqual(result["process_score"], 1.0)
+
     def test_routing_custom_check_scores_full(self) -> None:
         scenario = load_scenario(scenarios_root() / "planning" / "13_openclaw_skill_routing_live.yaml")
         with tempfile.TemporaryDirectory() as tmpdir, patch(

@@ -86,6 +86,21 @@ def _find_latest_report(results_dir: Path, model: str) -> Path | None:
     return matches[-1] if matches else None
 
 
+def _coerce_int(value: object, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _report_is_complete(result: BenchmarkResult) -> bool:
+    progress = result.summary.get("progress", {}) if result.summary else {}
+    completed = _coerce_int(progress.get("completed_scenarios"), len(result.scenarios))
+    requested_default = int(result.total_scenarios or len(result.scenarios))
+    requested = _coerce_int(progress.get("requested_scenarios"), requested_default)
+    return requested > 0 and completed >= requested
+
+
 def _inventory_payload(args: argparse.Namespace) -> dict[str, object]:
     selection = _benchmark_selection(args)
     scenarios = load_scenarios(**_scenario_filters(args))
@@ -225,12 +240,22 @@ def _run_common(args: argparse.Namespace) -> int:
         if latest is not None:
             existing_result = _load_existing_result(latest)
     existing_report_path = Path(existing_result.summary["report_path"]) if existing_result and existing_result.summary.get("report_path") else None
-    report_path = existing_report_path if existing_report_path else reserve_report_path(results_dir, args.model)
+    preserve_completed_source = bool(existing_result and existing_report_path and _report_is_complete(existing_result))
+    if preserve_completed_source:
+        report_path = reserve_report_path(results_dir, args.model)
+    else:
+        report_path = existing_report_path if existing_report_path else reserve_report_path(results_dir, args.model)
     if existing_result:
         print(
             "resume_source: "
             f"reused={len(existing_result.scenarios)} "
             f"path={existing_result.summary.get('report_path', '')}"
+        )
+    if preserve_completed_source:
+        print(
+            "resume_checkpoint: "
+            f"source_complete=True preserved={existing_report_path} "
+            f"target={report_path}"
         )
     if getattr(args, "rerun_execution_failures", False):
         print("resume_policy: prior execution failures stay pending and will be rerun on resume")

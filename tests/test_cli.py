@@ -284,6 +284,113 @@ class CliTests(unittest.TestCase):
         self.assertIn("--openclaw-state-dir /tmp/openclaw-bench-a", output)
         self.assertIn("--openclaw-gateway-port 19011", output)
 
+    def test_cmd_run_continue_from_completed_report_preserves_source_and_uses_fresh_checkpoint(self) -> None:
+        args = run.build_parser().parse_args(["run", "--model", "glm/GLM-5", "--scenario", "stub_case", "--continue"])
+        fake_result = mock.Mock()
+        fake_result.summary = {"report_path": ""}
+        existing_path = Path("results/existing-complete.json")
+        fresh_path = Path("results/fresh-rerun.json")
+        existing_result = mock.Mock()
+        existing_result.summary = {
+            "report_path": str(existing_path),
+            "progress": {"completed_scenarios": 1, "requested_scenarios": 1},
+        }
+        existing_result.scenarios = [mock.sentinel.existing_scenario]
+        existing_result.total_scenarios = 1
+        buffer = io.StringIO()
+
+        with (
+            redirect_stdout(buffer),
+            mock.patch.object(run, "load_scenarios", return_value=[mock.sentinel.scenario]),
+            mock.patch.object(run, "_find_latest_report", return_value=existing_path),
+            mock.patch.object(run, "_load_existing_result", return_value=existing_result),
+            mock.patch.object(run, "reserve_report_path", return_value=fresh_path) as reserve_report_path,
+            mock.patch.object(run, "write_report", return_value=fresh_path),
+            mock.patch.object(run, "print_summary"),
+            mock.patch.object(run, "BenchmarkRunner") as runner_cls,
+        ):
+            runner_cls.return_value.run_with_resume.return_value = fake_result
+            exit_code = args.func(args)
+
+        self.assertEqual(exit_code, 0)
+        kwargs = runner_cls.return_value.run_with_resume.call_args.kwargs
+        self.assertEqual(kwargs["checkpoint_path"], fresh_path)
+        reserve_report_path.assert_called_once()
+        output = buffer.getvalue()
+        self.assertIn("resume_checkpoint:", output)
+        self.assertIn(str(existing_path), output)
+        self.assertIn(str(fresh_path), output)
+
+    def test_cmd_run_resume_from_completed_report_preserves_source_and_uses_fresh_checkpoint(self) -> None:
+        existing_path = Path("results/existing-complete.json")
+        args = run.build_parser().parse_args(
+            ["run", "--model", "glm/GLM-5", "--scenario", "stub_case", "--resume-from", str(existing_path)]
+        )
+        fake_result = mock.Mock()
+        fake_result.summary = {"report_path": ""}
+        fresh_path = Path("results/fresh-rerun.json")
+        existing_result = mock.Mock()
+        existing_result.summary = {
+            "report_path": str(existing_path),
+            "progress": {"completed_scenarios": 1, "requested_scenarios": 1},
+        }
+        existing_result.scenarios = [mock.sentinel.existing_scenario]
+        existing_result.total_scenarios = 1
+        buffer = io.StringIO()
+
+        with (
+            redirect_stdout(buffer),
+            mock.patch.object(run, "load_scenarios", return_value=[mock.sentinel.scenario]),
+            mock.patch.object(run, "_load_existing_result", return_value=existing_result),
+            mock.patch.object(run, "reserve_report_path", return_value=fresh_path) as reserve_report_path,
+            mock.patch.object(run, "write_report", return_value=fresh_path),
+            mock.patch.object(run, "print_summary"),
+            mock.patch.object(run, "BenchmarkRunner") as runner_cls,
+        ):
+            runner_cls.return_value.run_with_resume.return_value = fake_result
+            exit_code = args.func(args)
+
+        self.assertEqual(exit_code, 0)
+        kwargs = runner_cls.return_value.run_with_resume.call_args.kwargs
+        self.assertEqual(kwargs["checkpoint_path"], fresh_path)
+        reserve_report_path.assert_called_once()
+        output = buffer.getvalue()
+        self.assertIn("resume_source:", output)
+        self.assertIn(str(existing_path), output)
+        self.assertIn("resume_checkpoint:", output)
+        self.assertIn(str(fresh_path), output)
+
+    def test_cmd_run_continue_from_incomplete_report_reuses_checkpoint_path(self) -> None:
+        args = run.build_parser().parse_args(["run", "--model", "glm/GLM-5", "--scenario", "stub_case", "--continue"])
+        fake_result = mock.Mock()
+        fake_result.summary = {"report_path": ""}
+        existing_path = Path("results/existing-incomplete.json")
+        existing_result = mock.Mock()
+        existing_result.summary = {
+            "report_path": str(existing_path),
+            "progress": {"completed_scenarios": 0, "requested_scenarios": 1},
+        }
+        existing_result.scenarios = []
+        existing_result.total_scenarios = 1
+
+        with (
+            redirect_stdout(io.StringIO()),
+            mock.patch.object(run, "load_scenarios", return_value=[mock.sentinel.scenario]),
+            mock.patch.object(run, "_find_latest_report", return_value=existing_path),
+            mock.patch.object(run, "_load_existing_result", return_value=existing_result),
+            mock.patch.object(run, "reserve_report_path") as reserve_report_path,
+            mock.patch.object(run, "write_report", return_value=existing_path),
+            mock.patch.object(run, "print_summary"),
+            mock.patch.object(run, "BenchmarkRunner") as runner_cls,
+        ):
+            runner_cls.return_value.run_with_resume.return_value = fake_result
+            exit_code = args.func(args)
+
+        self.assertEqual(exit_code, 0)
+        kwargs = runner_cls.return_value.run_with_resume.call_args.kwargs
+        self.assertEqual(kwargs["checkpoint_path"], existing_path)
+        reserve_report_path.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

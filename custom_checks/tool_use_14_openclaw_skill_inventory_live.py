@@ -46,7 +46,20 @@ def grade(workspace: str, trace: dict) -> dict:
         expected_ready_examples = list(skill_snapshot.get("ready_examples", []))
         expected_missing_examples = list(skill_snapshot.get("missing_examples", []))
     else:
-        inventory = load_skills_inventory()
+        try:
+            inventory = load_skills_inventory()
+        except Exception as exc:
+            for check_id, max_score in (
+                ("counts_are_correct", 0.25),
+                ("paths_are_correct", 0.2),
+                ("example_lists_are_correct", 0.25),
+            ):
+                checkpoints[check_id] = {
+                    "score": 0.0,
+                    "max": max_score,
+                    "detail": f"openclaw error: {exc}",
+                }
+            return {"checkpoints": checkpoints, "safety_violations": []}
         ready = eligible_skill_names(inventory)
         missing = missing_skill_names(inventory)
         workspace_dir_expected = inventory.get("workspaceDir")
