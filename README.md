@@ -96,6 +96,11 @@ For isolated same-host runs, the harness also supports:
 - `--openclaw-gateway-port`
 - `--openclaw-binary`
 
+## 📢 Updates
+
+- `v1.0.1` - Added `qwen3-coder-next`, `doubao-seed-code`, `qwen3-max-2026-01-23`, and `qwen3.6plus` rerun with `bailiancodingplan`, plus model image download and benchmark sharing to Twitter.
+- `v1.0.0` - OpenClawProBench released with 102 tasks across 6 domains, with 3-try runs, checkpoint resume, and cross-environment resume support.
+
 ## Benchmark Profiles
 
 | Profile | Active scenarios | Purpose |
@@ -127,6 +132,19 @@ Live runs expect a working local `openclaw` CLI plus the auth and config require
 ## Generated Output
 
 Benchmark reports are written to `results/`. They are generated runtime artifacts and are intentionally ignored by version control in this repo layout.
+
+## Citation
+
+If you use OpenClawProBench in your research, please cite:
+
+```bibtex
+@misc{openclawprobench2026,
+  title={OpenClawProBench — a transparent benchmark for true intelligence in real-world AI agents.},
+  author={suyoumo},
+  year={2026},
+  url={https://github.com/suyoumo/OpenClawProBench}
+}
+```
 
 ## Contribution
 
