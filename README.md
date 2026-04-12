@@ -27,6 +27,7 @@ Browse the public leaderboard and benchmark cases at **[suyoumo.github.io/bench]
 
 ## 📢 Updates
 
+- `v1.0.3` - Reviewed leaderboard, detail, and raw-result consistency across 40+ benchmark models; fixed confirmed data mismatches for `doubao-seed-code`, `qwen3.6-plus`, `qwen3-max-2026-01-23`, `astron-code-latest`, and `ERNIE-4.5-Turbo`.
 - `v1.0.2` - Added `kimi-for-coding`, `gemma4-31b`, and `kimi-k2-thinking`; improved image download flows for easier mobile-device browsing.
 - `v1.0.1` - Added `qwen3-coder-next`, `doubao-seed-code`, `qwen3-max-2026-01-23`, and `qwen3.6plus` rerun with `bailiancodingplan`; added model image download and benchmark sharing to Twitter; fixed completed-report resume overwrite, `tool_use_14` graceful fallback on skills inventory load failure, `tool_use_17` invalid JSON and missing-file tolerance, and `audit_scenario_quality.py` compatibility.
 - `v1.0.0` - ClawProBench released with 102 tasks across 6 domains, with 3-try runs, checkpoint resume, and cross-environment resume support.
@@ -162,9 +163,3 @@ Some tasks in this repository are adapted and reworked from earlier public bench
 ## Contributors
 
 Public contributor list: waiting.
-
-## Discussion Group
-
-![OpenClaw WeChat community QR code](docs/assets/openclaw-wechat-group-qr.jpg)
-
-Join our WeChat discussion group to discuss OpenClaw with other users and builders.
