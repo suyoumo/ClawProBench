@@ -144,7 +144,7 @@ If you use ClawProBench in your research, please cite:
   title={ClawProBench — a transparent benchmark for true intelligence in real-world AI agents.},
   author={suyoumo},
   year={2026},
-  url={https://github.com/suyoumo/OpenClawProBench}
+  url={https://github.com/suyoumo/ClawProBench}
 }
 ```
 
