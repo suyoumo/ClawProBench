@@ -108,11 +108,95 @@ class LiveHarnessTests(unittest.TestCase):
             self.assertEqual(seeded_config["auth"]["profiles"]["zai:default"]["provider"], "zai")
             self.assertEqual(seeded_config["agents"]["list"], [{"id": "main"}])
             self.assertEqual(seeded_config["agents"]["defaults"]["maxConcurrent"], 2)
+            self.assertEqual(
+                seeded_config["logging"]["file"],
+                str((target_state_dir / "logs" / "openclaw.log").resolve(strict=False)),
+            )
 
             target_auth_profiles = target_state_dir / "agents" / "main" / "agent" / "auth-profiles.json"
             self.assertTrue(target_auth_profiles.exists())
             copied_auth = json.loads(target_auth_profiles.read_text(encoding="utf-8"))
             self.assertEqual(copied_auth["profiles"]["zai:default"]["provider"], "zai")
+
+    def test_ensure_isolated_state_seeded_adds_isolated_logging_file_when_config_is_already_complete(self) -> None:
+        with tempfile.TemporaryDirectory() as target_dir:
+            target_state_dir = Path(target_dir)
+            target_config_path = target_state_dir / "openclaw.json"
+            target_state_dir.mkdir(parents=True, exist_ok=True)
+            target_config_path.write_text(
+                json.dumps(
+                    {
+                        "auth": {"profiles": {"moonshot:default": {"provider": "moonshot", "mode": "api_key"}}},
+                        "models": {"providers": {"moonshot": {"models": [{"id": "kimi-k2.6-preview"}]}}},
+                        "agents": {"defaults": {}, "list": [{"id": "main"}]},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            harness = OpenClawLiveHarness(openclaw_state_dir=str(target_state_dir))
+
+            harness._ensure_isolated_state_seeded()
+
+            updated_config = json.loads(target_config_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                updated_config["logging"]["file"],
+                str((target_state_dir / "logs" / "openclaw.log").resolve(strict=False)),
+            )
+
+    def test_ensure_isolated_state_seeded_sanitizes_stale_plugins_runtime_noise_and_cron_state(self) -> None:
+        with tempfile.TemporaryDirectory() as target_dir:
+            target_state_dir = Path(target_dir)
+            target_config_path = target_state_dir / "openclaw.json"
+            cron_runs_dir = target_state_dir / "cron" / "runs"
+            cron_runs_dir.mkdir(parents=True, exist_ok=True)
+            (target_state_dir / "cron" / "jobs.json").write_text('{"jobs":[{"id":"stale"}]}', encoding="utf-8")
+            (cron_runs_dir / "stale.jsonl").write_text("old\n", encoding="utf-8")
+            target_config_path.write_text(
+                json.dumps(
+                    {
+                        "auth": {"profiles": {"moonshot:default": {"provider": "moonshot", "mode": "api_key"}}},
+                        "models": {"providers": {"moonshot": {"models": [{"id": "kimi-k2.6-preview"}]}}},
+                        "agents": {
+                            "defaults": {"maxConcurrent": 4},
+                            "list": [{"id": "main"}, {"id": "stale-agent"}],
+                        },
+                        "channels": {
+                            "telegram": {"enabled": True},
+                            "feishu": {"enabled": True},
+                        },
+                        "gateway": {"tailscale": {"mode": "serve", "resetOnExit": True}},
+                        "hooks": {"internal": {"entries": {"command-logger": {"enabled": True}}}},
+                        "plugins": {
+                            "allow": ["telegram", "openclaw-lark", "cccontrol"],
+                            "entries": {
+                                "telegram": {"enabled": True},
+                                "openclaw-lark": {"enabled": True},
+                                "cccontrol": {"enabled": True},
+                            },
+                            "installs": {
+                                "openclaw-lark": {"installPath": "/tmp/missing-openclaw-lark"},
+                                "cccontrol": {"installPath": "/tmp/cccontrol"},
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            harness = OpenClawLiveHarness(openclaw_state_dir=str(target_state_dir))
+            harness._ensure_isolated_state_seeded()
+
+            updated_config = json.loads(target_config_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated_config["agents"]["list"], [{"id": "main"}])
+            self.assertEqual(updated_config["plugins"]["allow"], ["telegram", "cccontrol"])
+            self.assertNotIn("openclaw-lark", updated_config["plugins"]["entries"])
+            self.assertNotIn("openclaw-lark", updated_config["plugins"]["installs"])
+            self.assertFalse(updated_config["channels"]["feishu"]["enabled"])
+            self.assertEqual(updated_config["gateway"]["tailscale"]["mode"], "off")
+            self.assertFalse(updated_config["hooks"]["internal"]["entries"]["command-logger"]["enabled"])
+            self.assertFalse((target_state_dir / "cron" / "jobs.json").exists())
+            self.assertFalse((cron_runs_dir / "stale.jsonl").exists())
 
     def test_sync_isolated_model_runtime_pins_primary_model_and_refreshes_provider_token(self) -> None:
         with tempfile.TemporaryDirectory() as home_dir, tempfile.TemporaryDirectory() as target_dir:
@@ -399,6 +483,22 @@ class LiveHarnessTests(unittest.TestCase):
                 ),
             ):
                 with self.assertRaisesRegex(RuntimeError, "No auth profiles found for providers: minimax"):
+                    harness._create_agent("agent-1", "minimax/MiniMax-M2.7", workspace)
+
+    def test_create_agent_strips_openclaw_log_pollution_when_add_fails(self) -> None:
+        harness = OpenClawLiveHarness()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+            completed = mock.Mock(
+                returncode=1,
+                stdout="",
+                stderr=(
+                    "[openclaw] log file size cap reached; suppressing writes file=/tmp/openclaw/openclaw-2026-04-14.log maxFileBytes=5242880\n"
+                    "agent add failed"
+                ),
+            )
+            with mock.patch("harness.live_harness.subprocess.run", side_effect=[mock.Mock(returncode=0, stdout="", stderr=""), completed]):
+                with self.assertRaisesRegex(RuntimeError, "agent add failed"):
                     harness._create_agent("agent-1", "minimax/MiniMax-M2.7", workspace)
 
     def test_resolve_transcript_path_uses_sessions_metadata_when_requested_id_is_not_real_session_id(self) -> None:
@@ -763,6 +863,46 @@ class LiveHarnessTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(result.error_detail, "")
         self.assertTrue(result.trace["audit_state"]["live_runtime"]["normalized_terminated_exit"])
+
+    def test_build_error_detail_ignores_openclaw_log_size_cap_pollution(self) -> None:
+        harness = OpenClawLiveHarness()
+
+        detail = harness._build_error_detail(
+            status="error",
+            exit_code=1,
+            stderr="[openclaw] log file size cap reached; suppressing writes file=/tmp/openclaw/openclaw-2026-04-14.log maxFileBytes=5242880\n",
+            stdout="",
+            payload=None,
+        )
+
+        self.assertEqual(detail, "OpenClaw agent exited with code 1")
+
+    def test_clean_openclaw_command_streams_preserves_real_stderr_after_pollution(self) -> None:
+        harness = OpenClawLiveHarness()
+
+        stdout, stderr = harness._clean_openclaw_command_streams(
+            '{"result": {}}',
+            "[openclaw] log file size cap reached; suppressing writes file=/tmp/openclaw/openclaw-2026-04-14.log maxFileBytes=5242880\nreal failure",
+        )
+
+        self.assertEqual(stdout, '{"result": {}}')
+        self.assertEqual(stderr, "real failure")
+
+    def test_run_agents_list_strips_openclaw_log_pollution_from_stderr(self) -> None:
+        harness = OpenClawLiveHarness()
+        completed = mock.Mock(
+            returncode=0,
+            stdout='[{"id": "agent-1"}]',
+            stderr="[openclaw] log file size cap reached; suppressing writes file=/tmp/openclaw/openclaw-2026-04-15.log maxFileBytes=5242880\n",
+        )
+
+        with mock.patch("harness.live_harness.subprocess.run", return_value=completed):
+            exit_code, stdout, stderr, payload = harness._run_agents_list()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout, '[{"id": "agent-1"}]')
+        self.assertEqual(stderr, "")
+        self.assertEqual(payload, [{"id": "agent-1"}])
 
     def test_payload_usage_merges_multiple_common_locations(self) -> None:
         harness = OpenClawLiveHarness()

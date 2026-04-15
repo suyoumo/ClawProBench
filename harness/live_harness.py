@@ -121,6 +121,7 @@ class OpenClawLiveHarness:
                 )
                 stdout = result.stdout
                 stderr = result.stderr
+                stdout, stderr = self._clean_openclaw_command_streams(stdout, stderr)
                 exit_code = int(result.returncode or 0)
                 payload = self._parse_json_payload(stdout)
                 ok = exit_code == 0
@@ -164,6 +165,7 @@ class OpenClawLiveHarness:
                         )
                         stdout = retry_result.stdout
                         stderr = retry_result.stderr
+                        stdout, stderr = self._clean_openclaw_command_streams(stdout, stderr)
                         exit_code = int(retry_result.returncode or 0)
                         payload = self._parse_json_payload(stdout)
                         ok = exit_code == 0
@@ -290,6 +292,7 @@ class OpenClawLiveHarness:
             )
             command_started = True
             stdout, stderr = self._communicate_with_heartbeat(proc, timeout=timeout, agent_id=agent_id)
+            stdout, stderr = self._clean_openclaw_command_streams(stdout, stderr)
             payload = self._parse_json_payload(stdout)
             if self._is_unknown_agent_error(stderr, stdout, payload):
                 auth_copy_result = self._create_agent(agent_id, model, workspace_path)
@@ -312,6 +315,7 @@ class OpenClawLiveHarness:
                     env=self.command_env,
                 )
                 stdout, stderr = self._communicate_with_heartbeat(proc, timeout=timeout, agent_id=agent_id)
+                stdout, stderr = self._clean_openclaw_command_streams(stdout, stderr)
                 payload = self._parse_json_payload(stdout)
             resolved_session_id = self._payload_session_id(payload) or requested_session_id
             exit_code = int(proc.returncode or 0)
@@ -576,6 +580,110 @@ class OpenClawLiveHarness:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
+    def _isolated_log_file_path(self, env: dict[str, str] | None = None) -> Path:
+        return (self._state_dir_path(env) / "logs" / "openclaw.log").resolve(strict=False)
+
+    def _ensure_isolated_logging_config(
+        self,
+        payload: dict[str, Any],
+        *,
+        env: dict[str, str] | None = None,
+    ) -> bool:
+        if not isinstance(payload, dict):
+            return False
+        logging_config = payload.get("logging")
+        if not isinstance(logging_config, dict):
+            logging_config = {}
+            payload["logging"] = logging_config
+        desired_file = str(self._isolated_log_file_path(env))
+        if logging_config.get("file") == desired_file:
+            return False
+        logging_config["file"] = desired_file
+        return True
+
+    def _sanitize_isolated_benchmark_config(self, payload: dict[str, Any]) -> bool:
+        if not isinstance(payload, dict):
+            return False
+
+        changed = False
+
+        plugins = payload.get("plugins")
+        if isinstance(plugins, dict):
+            allow = plugins.get("allow")
+            if isinstance(allow, list):
+                next_allow = [item for item in allow if str(item).strip().lower() != "openclaw-lark"]
+                if next_allow != allow:
+                    plugins["allow"] = next_allow
+                    changed = True
+
+            entries = plugins.get("entries")
+            if isinstance(entries, dict) and "openclaw-lark" in entries:
+                next_entries = dict(entries)
+                next_entries.pop("openclaw-lark", None)
+                plugins["entries"] = next_entries
+                changed = True
+
+            installs = plugins.get("installs")
+            if isinstance(installs, dict) and "openclaw-lark" in installs:
+                next_installs = dict(installs)
+                next_installs.pop("openclaw-lark", None)
+                plugins["installs"] = next_installs
+                changed = True
+
+        channels = payload.get("channels")
+        if isinstance(channels, dict):
+            feishu = channels.get("feishu")
+            if isinstance(feishu, dict) and feishu.get("enabled") is not False:
+                next_feishu = dict(feishu)
+                next_feishu["enabled"] = False
+                channels["feishu"] = next_feishu
+                changed = True
+
+        gateway = payload.get("gateway")
+        if isinstance(gateway, dict):
+            tailscale = gateway.get("tailscale")
+            if isinstance(tailscale, dict) and tailscale.get("mode") != "off":
+                next_tailscale = dict(tailscale)
+                next_tailscale["mode"] = "off"
+                gateway["tailscale"] = next_tailscale
+                changed = True
+
+        hooks = payload.get("hooks")
+        if isinstance(hooks, dict):
+            internal = hooks.get("internal")
+            if isinstance(internal, dict):
+                entries = internal.get("entries")
+                if isinstance(entries, dict):
+                    command_logger = entries.get("command-logger")
+                    if isinstance(command_logger, dict) and command_logger.get("enabled") is not False:
+                        next_entries = dict(entries)
+                        next_command_logger = dict(command_logger)
+                        next_command_logger["enabled"] = False
+                        next_entries["command-logger"] = next_command_logger
+                        internal["entries"] = next_entries
+                        changed = True
+
+        agents = payload.get("agents")
+        if isinstance(agents, dict) and agents.get("list") != [{"id": "main"}]:
+            agents["list"] = [{"id": "main"}]
+            changed = True
+
+        cron_dir = self._state_dir_path() / "cron"
+        jobs_path = cron_dir / "jobs.json"
+        if jobs_path.exists():
+            jobs_path.unlink()
+            changed = True
+        runs_dir = cron_dir / "runs"
+        if runs_dir.exists():
+            for path in sorted(runs_dir.rglob("*"), reverse=True):
+                if path.is_file() or path.is_symlink():
+                    path.unlink()
+                elif path.is_dir():
+                    path.rmdir()
+            changed = True
+
+        return changed
+
     def _target_config_needs_seed(self, payload: dict[str, Any] | None) -> bool:
         if not isinstance(payload, dict):
             return True
@@ -633,12 +741,17 @@ class OpenClawLiveHarness:
 
             target_payload = self._read_json_file(target_config_path)
             source_payload = self._read_json_file(source_config_path)
+            config_changed = False
             if self._target_config_needs_seed(target_payload) and source_payload is not None:
                 seeded_payload = self._build_seeded_config(source_payload, target_payload)
-                target_config_path.write_text(
-                    json.dumps(seeded_payload, indent=2, ensure_ascii=False),
-                    encoding="utf-8",
-                )
+                target_payload = seeded_payload
+                config_changed = True
+            if isinstance(target_payload, dict):
+                target_state_dir.joinpath("logs").mkdir(parents=True, exist_ok=True)
+                config_changed = self._ensure_isolated_logging_config(target_payload) or config_changed
+                config_changed = self._sanitize_isolated_benchmark_config(target_payload) or config_changed
+            if config_changed and isinstance(target_payload, dict):
+                self._write_json_file(target_config_path, target_payload)
 
             if not target_auth_profiles_path.exists() and source_auth_profiles_path.exists():
                 target_auth_profiles_path.write_text(
@@ -1010,8 +1123,9 @@ class OpenClawLiveHarness:
             check=False,
             env=self.command_env,
         )
+        stdout, stderr = self._clean_openclaw_command_streams(result.stdout, result.stderr)
         if result.returncode != 0:
-            detail = result.stderr.strip() or result.stdout.strip() or "failed to create agent"
+            detail = stderr.strip() or stdout.strip() or "failed to create agent"
             raise RuntimeError(detail)
         self._sync_isolated_agent_runtime(agent_id, model)
         auth_providers = self._auth_profile_providers_for_model(model)
@@ -1051,8 +1165,9 @@ class OpenClawLiveHarness:
             check=False,
             env=self.command_env,
         )
-        payload = self._parse_agents_list(result.stdout) if result.returncode == 0 else None
-        return result.returncode, result.stdout, result.stderr, payload
+        stdout, stderr = self._clean_openclaw_command_streams(result.stdout, result.stderr)
+        payload = self._parse_agents_list(stdout) if result.returncode == 0 else None
+        return result.returncode, stdout, stderr, payload
 
     def _agent_entry_candidates(self, item: dict[str, Any]) -> set[str]:
         candidates: set[str] = set()
@@ -1457,6 +1572,17 @@ class OpenClawLiveHarness:
         payload = extract_json_payload(stdout)
         return payload if isinstance(payload, dict) else None
 
+    def _strip_known_openclaw_log_pollution(self, text: str) -> str:
+        cleaned_lines = [
+            line
+            for line in str(text or "").splitlines()
+            if not line.startswith("[openclaw] log file size cap reached; suppressing writes file=")
+        ]
+        return "\n".join(cleaned_lines).strip()
+
+    def _clean_openclaw_command_streams(self, stdout: str, stderr: str) -> tuple[str, str]:
+        return stdout, self._strip_known_openclaw_log_pollution(stderr)
+
     def _payload_session_id(self, payload: dict[str, Any] | None) -> str | None:
         if payload is None:
             return None
@@ -1575,7 +1701,8 @@ class OpenClawLiveHarness:
     ) -> str:
         if status == "success":
             return ""
-        for candidate in (stderr, self._payload_error_detail(payload), stdout):
+        cleaned_stderr = self._strip_known_openclaw_log_pollution(stderr)
+        for candidate in (cleaned_stderr, self._payload_error_detail(payload), stdout):
             detail = self._stringify_detail(candidate)
             if detail:
                 return detail
