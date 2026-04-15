@@ -27,7 +27,7 @@ Browse the public leaderboard and benchmark cases at **[suyoumo.github.io/bench]
 
 ## 📢 Updates
 
-- `v1.0.4` - Hardened isolated live runs against OpenClaw log pollution. The harness now strips known `log file size cap reached` stderr noise before execution-failure classification, writes isolated runs to per-state log files, and sanitizes stale runtime noise in isolated configs by removing `openclaw-lark`, disabling Feishu, turning off Tailscale gateway mode, disabling the internal command logger, and clearing stale cron state. This fixes a class of false execution failures where benchmark tasks were affected by unrelated OpenClaw log spam rather than real model or harness errors.
+- `v1.0.4` - Fixed isolated live-run log pollution that could cause false execution failures. Added `kimi-k2.6-code-preview`; the leaderboard now includes `43` model results.
 - `v1.0.3` - Reviewed leaderboard, detail, and raw-result consistency across 40+ benchmark models; fixed confirmed data mismatches for `doubao-seed-code`, `qwen3.6-plus`, `qwen3-max-2026-01-23`, `astron-code-latest`, and `ERNIE-4.5-Turbo`.
 - `v1.0.2` - Added `kimi-for-coding`, `gemma4-31b`, and `kimi-k2-thinking`; improved image download flows for easier mobile-device browsing.
 - `v1.0.1` - Added `qwen3-coder-next`, `doubao-seed-code`, `qwen3-max-2026-01-23`, and `qwen3.6plus` rerun with `bailiancodingplan`; added model image download and benchmark sharing to Twitter; fixed completed-report resume overwrite, `tool_use_14` graceful fallback on skills inventory load failure, `tool_use_17` invalid JSON and missing-file tolerance, and `audit_scenario_quality.py` compatibility.
