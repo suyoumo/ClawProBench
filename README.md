@@ -27,6 +27,7 @@ Browse the public leaderboard and benchmark cases at **[suyoumo.github.io/bench]
 
 ## 📢 Updates
 
+- `v1.0.5` - Fixed the `qwen3.6-plus` model detail bug where the Bailian and Qwen Coding Plan entries incorrectly showed duplicated per-task scores.
 - `v1.0.4` - Fixed isolated live-run log pollution that could cause false execution failures. Added `kimi-k2.6-code-preview`; the leaderboard now includes `43` model results.
 - `v1.0.3` - Reviewed leaderboard, detail, and raw-result consistency across 40+ benchmark models; fixed confirmed data mismatches for `doubao-seed-code`, `qwen3.6-plus`, `qwen3-max-2026-01-23`, `astron-code-latest`, and `ERNIE-4.5-Turbo`.
 - `v1.0.2` - Added `kimi-for-coding`, `gemma4-31b`, and `kimi-k2-thinking`; improved image download flows for easier mobile-device browsing.
