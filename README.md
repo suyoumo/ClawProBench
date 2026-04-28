@@ -27,7 +27,7 @@ Browse the public leaderboard and benchmark cases at **[suyoumo.github.io/bench]
 
 ## 📢 Updates
 
-- `v1.1.1` - Added leaderboard results for `kimi-k2.6`; the leaderboard now includes `56` models.
+- `v1.1.1` - Added leaderboard results for `kimi-k2.6`; the leaderboard now includes `57` models.
 - `v1.1.0` - Added leaderboard results for `qwen3.6-27b`, `qwen3.6-35b-a3b`, and `qwen3.6-flash`.
 - `v1.0.9` - Verified model-detail data across the leaderboard, fixed several data errors, added `DeepSeeK-V4-Pro`, `DeepSeek-V4-Flash`, `LongCat-2.0-Preview`, and `Ling-2.6-1T`, and introduced the new `FinalScore` metric based on `pass^3`, `pass@3`, and `average_score`.
 - `v1.0.8` - Added 6 new leaderboard models: `qwen3.6-max-preview`, `mimo-v2.5`, `mimo-v2.5-pro`, `hunyuan-t1`, `hy3-preview`, and `Ling-2.6-Flash`.
