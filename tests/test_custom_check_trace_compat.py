@@ -54,3 +54,18 @@ class CustomCheckTraceCompatTests(unittest.TestCase):
         }
         result = self._run_custom("tool_use/21_recurring_cron_expiry_notice_live.yaml", trace)
         self.assertEqual(result.get("process_score"), 1.0)
+
+    def test_planning_07_process_tolerates_non_dict_tool_args(self) -> None:
+        trace = {
+            "events": [
+                {"type": "tool_call", "tool": "read", "args": {"file": "/tmp/resource_windows.json"}},
+                {"type": "tool_call", "tool": "read", "args": {"file": "/tmp/task_catalog.json"}},
+                {"type": "tool_call", "tool": "read", "args": {"file": "/tmp/baseline_service.json"}},
+                {"type": "tool_call", "tool": "read", "args": {"file": "/tmp/scheduler_objectives.json"}},
+                {"type": "tool_call", "tool": "read", "args": {"file": "/tmp/allocation_rules.yaml"}},
+                {"type": "tool_call", "tool": "exec", "args": ["cat", "allocation_rules.yaml"]},
+                {"type": "tool_call", "tool": "write", "args": {"file": "/tmp/dynamic_allocation_plan.json"}},
+            ]
+        }
+        result = self._run_custom("planning/07_dynamic_resource_allocation_live.yaml", trace)
+        self.assertEqual(result.get("process_score"), 1.0)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import time
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -12,12 +13,22 @@ from .models import Scenario
 
 
 def _load_module(path: Path):
-    spec = importlib.util.spec_from_file_location(path.stem, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Could not load custom check module from {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    last_error: Exception | None = None
+    for attempt in range(3):
+        spec = importlib.util.spec_from_file_location(path.stem, path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"Could not load custom check module from {path}")
+        module = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(module)
+            return module
+        except PermissionError as exc:
+            last_error = exc
+            if attempt == 2:
+                break
+            time.sleep(0.1 * (attempt + 1))
+    assert last_error is not None
+    raise PermissionError(f"Could not load custom check module from {path}: {last_error}") from last_error
 
 
 def _call_with_supported_arity(func, *args):
@@ -32,6 +43,21 @@ def _call_with_supported_arity(func, *args):
     return func(*args[: len(positional)])
 
 
+def _normalize_tool_args(args: Any) -> dict[str, Any]:
+    if isinstance(args, dict):
+        normalized = deepcopy(args)
+    else:
+        normalized = {}
+        if args not in (None, ""):
+            normalized["raw"] = args
+            normalized["command"] = str(args)
+    file_value = normalized.get("file")
+    if isinstance(file_value, str) and file_value:
+        normalized.setdefault("path", file_value)
+        normalized.setdefault("file_path", file_value)
+    return normalized
+
+
 def normalize_trace_file_args(trace: dict[str, Any]) -> dict[str, Any]:
     normalized = deepcopy(trace)
     events = normalized.get("events")
@@ -40,14 +66,7 @@ def normalize_trace_file_args(trace: dict[str, Any]) -> dict[str, Any]:
     for event in events:
         if not isinstance(event, dict) or event.get("type") != "tool_call":
             continue
-        args = event.get("args")
-        if not isinstance(args, dict):
-            continue
-        file_value = args.get("file")
-        if not isinstance(file_value, str) or not file_value:
-            continue
-        args.setdefault("path", file_value)
-        args.setdefault("file_path", file_value)
+        event["args"] = _normalize_tool_args(event.get("args"))
     return normalized
 
 
@@ -56,14 +75,7 @@ def normalize_tool_calls(tool_calls: list[dict[str, Any]]) -> list[dict[str, Any
     for call in normalized_calls:
         if not isinstance(call, dict):
             continue
-        args = call.get("args")
-        if not isinstance(args, dict):
-            continue
-        file_value = args.get("file")
-        if not isinstance(file_value, str) or not file_value:
-            continue
-        args.setdefault("path", file_value)
-        args.setdefault("file_path", file_value)
+        call["args"] = _normalize_tool_args(call.get("args"))
     return normalized_calls
 
 
