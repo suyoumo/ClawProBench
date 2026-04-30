@@ -766,6 +766,25 @@ class LiveHarnessTests(unittest.TestCase):
         self.assertIn("OpenClaw live preflight timed out", result.error_detail)
         self.assertIn("attempt=2 timeout_s=45", result.error_detail)
 
+    def test_preflight_bootstraps_gateway_after_agents_list_timeout(self) -> None:
+        harness = OpenClawLiveHarness(openclaw_state_dir="/tmp/openclaw-bench-a", openclaw_gateway_port=19021)
+        completed = mock.Mock(returncode=0, stdout="[]", stderr="")
+
+        with (
+            mock.patch(
+                "harness.live_harness.subprocess.run",
+                side_effect=[subprocess.TimeoutExpired(["openclaw", "agents", "list"], 45), completed],
+            ),
+            mock.patch.object(harness, "_ensure_gateway_ready", return_value=True) as ensure_gateway,
+        ):
+            result = harness.preflight(timeout=45, max_attempts=1)
+
+        self.assertTrue(result.ok)
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("gateway_bootstrap_after_timeout=ok", result.error_detail)
+        self.assertIn("post_timeout_bootstrap_exit_code=0", result.error_detail)
+        ensure_gateway.assert_called_once()
+
     def test_preflight_surfaces_cli_runtime_error(self) -> None:
         harness = OpenClawLiveHarness()
         completed = mock.Mock(returncode=1, stdout="", stderr="missing gaxios")
@@ -794,6 +813,22 @@ class LiveHarnessTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("gateway_bootstrap=ok", result.error_detail)
         ensure_gateway.assert_called_once()
+
+    def test_ensure_gateway_ready_tolerates_agents_list_timeout_during_startup(self) -> None:
+        harness = OpenClawLiveHarness(openclaw_state_dir="/tmp/openclaw-bench-a", openclaw_gateway_port=19021)
+        proc = mock.Mock()
+        proc.poll.return_value = None
+        completed = mock.Mock(returncode=0, stdout="[]", stderr="")
+
+        with (
+            mock.patch("harness.live_harness.subprocess.Popen", return_value=proc),
+            mock.patch(
+                "harness.live_harness.subprocess.run",
+                side_effect=[subprocess.TimeoutExpired(["openclaw", "agents", "list"], 5), completed],
+            ),
+            mock.patch("harness.live_harness.time.sleep"),
+        ):
+            self.assertTrue(harness._ensure_gateway_ready(startup_timeout=10))
 
     def test_close_terminates_bootstrapped_gateway_process(self) -> None:
         harness = OpenClawLiveHarness(openclaw_state_dir="/tmp/openclaw-bench-a", openclaw_gateway_port=19021)

@@ -21,6 +21,11 @@ from .openclaw_native import extract_json_payload
 from .trace import _normalize_usage, normalize_trace
 
 
+DEFAULT_LIVE_PREFLIGHT_TIMEOUT_SECONDS = 90
+DEFAULT_LIVE_PREFLIGHT_ATTEMPTS = 3
+DEFAULT_GATEWAY_STARTUP_TIMEOUT_SECONDS = 60
+
+
 @dataclass
 class LiveRunResult:
     status: str = "pending"
@@ -126,7 +131,19 @@ class OpenClawLiveHarness:
         self._gateway_process: subprocess.Popen[str] | None = None
         self._state_seed_lock = threading.Lock()
 
-    def preflight(self, timeout: int = 45, max_attempts: int = 2) -> LivePreflightResult:
+    def preflight(
+        self,
+        timeout: int | None = None,
+        max_attempts: int | None = None,
+    ) -> LivePreflightResult:
+        timeout = self._configured_positive_int(
+            "OPENCLAW_LIVE_PREFLIGHT_TIMEOUT_SECONDS",
+            DEFAULT_LIVE_PREFLIGHT_TIMEOUT_SECONDS if timeout is None else timeout,
+        )
+        max_attempts = self._configured_positive_int(
+            "OPENCLAW_LIVE_PREFLIGHT_ATTEMPTS",
+            DEFAULT_LIVE_PREFLIGHT_ATTEMPTS if max_attempts is None else max_attempts,
+        )
         self._ensure_isolated_state_seeded()
         start = time.monotonic()
         last_stdout = ""
@@ -141,19 +158,7 @@ class OpenClawLiveHarness:
             stderr = ""
             exit_code = -1
             try:
-                result = subprocess.run(
-                    [self.openclaw_bin, "agents", "list", "--json"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    timeout=timeout,
-                    env=self.command_env,
-                )
-                stdout = result.stdout
-                stderr = result.stderr
-                stdout, stderr = self._clean_openclaw_command_streams(stdout, stderr)
-                exit_code = int(result.returncode or 0)
-                payload = self._parse_json_payload(stdout)
+                stdout, stderr, exit_code, payload = self._run_preflight_agents_list(timeout=timeout)
                 ok = exit_code == 0
                 error_detail = self._build_error_detail(
                     status="success" if ok else "error",
@@ -222,13 +227,58 @@ class OpenClawLiveHarness:
                 last_stdout = stdout
                 last_stderr = stderr
                 last_exit_code = exit_code
-            except subprocess.TimeoutExpired:
+            except subprocess.TimeoutExpired as exc:
                 attempt_summaries.append(
                     f"attempt={attempt} timeout_s={timeout} duration_s={time.monotonic() - attempt_start:.2f}"
                 )
-                last_stdout = stdout
-                last_stderr = stderr
+                last_stdout = self._timeout_stream_text(exc.output) or stdout
+                last_stderr = self._timeout_stream_text(exc.stderr) or stderr
                 last_exit_code = -1
+                if not gateway_bootstrap_attempted and self._should_attempt_gateway_bootstrap_after_timeout():
+                    gateway_bootstrap_attempted = True
+                    bootstrap_timeout = self._configured_positive_int(
+                        "OPENCLAW_GATEWAY_STARTUP_TIMEOUT_SECONDS",
+                        max(DEFAULT_GATEWAY_STARTUP_TIMEOUT_SECONDS, timeout),
+                    )
+                    bootstrap_ok = self._ensure_gateway_ready(startup_timeout=bootstrap_timeout)
+                    attempt_summaries.append(
+                        f"attempt={attempt} gateway_bootstrap_after_timeout={'ok' if bootstrap_ok else 'failed'}"
+                    )
+                    if bootstrap_ok:
+                        try:
+                            stdout, stderr, exit_code, payload = self._run_preflight_agents_list(timeout=timeout)
+                            ok = exit_code == 0
+                            error_detail = self._build_error_detail(
+                                status="success" if ok else "error",
+                                exit_code=exit_code,
+                                stderr=stderr,
+                                stdout=stdout,
+                                payload=payload,
+                            )
+                            final_error_detail = error_detail
+                            attempt_summaries.append(
+                                f"attempt={attempt} post_timeout_bootstrap_exit_code={exit_code} "
+                                f"duration_s={time.monotonic() - attempt_start:.2f}"
+                            )
+                            last_stdout = stdout
+                            last_stderr = stderr
+                            last_exit_code = exit_code
+                            if ok:
+                                return LivePreflightResult(
+                                    ok=True,
+                                    exit_code=exit_code,
+                                    error_detail="; ".join(attempt_summaries),
+                                    stdout=stdout,
+                                    stderr=stderr,
+                                    duration_seconds=time.monotonic() - start,
+                                )
+                        except subprocess.TimeoutExpired as retry_exc:
+                            attempt_summaries.append(
+                                f"attempt={attempt} post_timeout_bootstrap_timeout_s={timeout} "
+                                f"duration_s={time.monotonic() - attempt_start:.2f}"
+                            )
+                            last_stdout = self._timeout_stream_text(retry_exc.output) or last_stdout
+                            last_stderr = self._timeout_stream_text(retry_exc.stderr) or last_stderr
             except Exception as exc:  # pragma: no cover - integration failure path
                 attempt_summaries.append(
                     f"attempt={attempt} exception={str(exc)} duration_s={time.monotonic() - attempt_start:.2f}"
@@ -249,6 +299,37 @@ class OpenClawLiveHarness:
             stderr=last_stderr,
             duration_seconds=time.monotonic() - start,
         )
+
+    def _run_preflight_agents_list(self, *, timeout: int) -> tuple[str, str, int, dict[str, Any] | None]:
+        result = subprocess.run(
+            [self.openclaw_bin, "agents", "list", "--json"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+            env=self.command_env,
+        )
+        stdout, stderr = self._clean_openclaw_command_streams(result.stdout, result.stderr)
+        exit_code = int(result.returncode or 0)
+        payload = self._parse_json_payload(stdout)
+        return stdout, stderr, exit_code, payload
+
+    def _configured_positive_int(self, env_key: str, default: int) -> int:
+        raw = str(self.command_env.get(env_key, "")).strip()
+        if not raw:
+            return max(int(default), 1)
+        try:
+            return max(int(raw), 1)
+        except ValueError:
+            return max(int(default), 1)
+
+    @staticmethod
+    def _timeout_stream_text(value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, bytes):
+            return value.decode(errors="replace")
+        return str(value)
 
     def close(self) -> None:
         if self._gateway_process is None:
@@ -1383,6 +1464,11 @@ class OpenClawLiveHarness:
                 return True
         return False
 
+    def _should_attempt_gateway_bootstrap_after_timeout(self) -> bool:
+        if str(self.command_env.get("OPENCLAW_GATEWAY_PORT", "")).strip():
+            return True
+        return self._uses_isolated_state()
+
     def _ensure_gateway_ready(self, startup_timeout: int = 20) -> bool:
         if self._gateway_process is not None and self._gateway_process.poll() is None:
             return True
@@ -1408,14 +1494,18 @@ class OpenClawLiveHarness:
         while time.monotonic() < deadline:
             if self._gateway_process.poll() is not None:
                 return False
-            result = subprocess.run(
-                [self.openclaw_bin, "agents", "list", "--json"],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=min(max(startup_timeout, 1), 5),
-                env=self.command_env,
-            )
+            try:
+                result = subprocess.run(
+                    [self.openclaw_bin, "agents", "list", "--json"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=min(max(startup_timeout, 1), 5),
+                    env=self.command_env,
+                )
+            except subprocess.TimeoutExpired:
+                time.sleep(0.5)
+                continue
             if int(result.returncode or 0) == 0:
                 return True
             time.sleep(0.5)
