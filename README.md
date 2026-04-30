@@ -27,6 +27,16 @@ Browse the public leaderboard and benchmark cases at **[suyoumo.github.io/bench]
 
 [![ClawProBench ModelPK preview](docs/assets/modelpk.png)](https://suyoumo.github.io/bench/modelpk/)
 
+## Get Involved
+
+We sincerely thank friends from Kimi and Qwen for their helpful feedback and improvement suggestions for the ClawProBench leaderboard.
+
+We also thank LongCat, Kimi, Ant Ling, and MiMo for providing model access support, trial access, or platform resources. This support helped reduce evaluation costs and made it possible to cover more frontier and preview models in a transparent live-runtime setting.
+
+If domestic third-party API gateway providers would like their served models, such as Claude 4.7 Opus or GPT-5.5, to appear on the leaderboard, please contact us. We can run the benchmark and publish reproducible results when the evaluation setup is stable.
+
+To run ClawProBench, submit results, or discuss model evaluation for the leaderboard, contact: xyh920691910@outlook.com.
+
 ## 📢 Updates
 
 - `v1.1.2` - Added leaderboard data for `qwen3.5-397b-a17b`, fixed pricing and release-date metadata for several models, and added ModelPK for detailed model-to-model comparison.
