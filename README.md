@@ -25,8 +25,11 @@ Browse the public leaderboard and benchmark cases at **[suyoumo.github.io/bench]
 
 [![ClawProBench leaderboard preview](docs/assets/leaderboard-preview-20260426.png)](https://suyoumo.github.io/bench/)
 
+[![ClawProBench ModelPK preview](docs/assets/modelpk.png)](https://suyoumo.github.io/bench/modelpk/)
+
 ## 📢 Updates
 
+- `v1.1.2` - Added leaderboard data for `qwen3.5-397b-a17b`, fixed pricing and release-date metadata for several models, and added ModelPK for detailed model-to-model comparison.
 - `v1.1.1` - Added leaderboard results for `kimi-k2.6`; the leaderboard now includes `57` models.
 - `v1.1.0` - Added leaderboard results for `qwen3.6-27b`, `qwen3.6-35b-a3b`, and `qwen3.6-flash`.
 - `v1.0.9` - Verified model-detail data across the leaderboard, fixed several data errors, added `DeepSeeK-V4-Pro`, `DeepSeek-V4-Flash`, `LongCat-2.0-Preview`, and `Ling-2.6-1T`, and introduced the new `FinalScore` metric based on `pass^3`, `pass@3`, and `average_score`.
