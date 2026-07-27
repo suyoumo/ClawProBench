@@ -211,7 +211,7 @@ We welcome issues, documentation fixes, scenario improvements, grader hardening,
 
 This project was informed by prior open-source work on agent evaluation, benchmark design, and real-world task assessment.
 
-We drew ideas from projects such as PinchBench, Claw-Eval, AgencyBench, and related agent-benchmark efforts, especially in areas like task design, evaluation methodology, harness structure, and public benchmark presentation.
+We drew ideas from projects such as PinchBench, Claw-Eval, AgencyBench, and related agent-benchmark efforts, especially in areas like task design, evaluation methodology, harness structure, and public benchmark presentation. [ClawBench](https://github.com/TIGER-AI-Lab/ClawBench) is a complementary live-web benchmark for browser agents; this mention does not imply integration with ClawProBench.
 
 Some tasks in this repository are adapted and reworked from earlier public benchmark-style task sets into the OpenClaw runtime and grading framework.
 
