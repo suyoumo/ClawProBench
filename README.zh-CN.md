@@ -193,7 +193,7 @@ Benchmark 报告会写入 `results/`。这些是运行时生成产物，在当�
 ```bibtex
 @misc{clawprobench2026,
   title={ClawProBench: Trace-Aware Evaluation of AI Agents with Runtime Coverage and Frozen Workplace-Style Holdouts},
-  author={Xiao, YuanHang},
+  author={YuanHang, Xiao},
   year={2026},
   eprint={2608.22510},
   archivePrefix={arXiv},
