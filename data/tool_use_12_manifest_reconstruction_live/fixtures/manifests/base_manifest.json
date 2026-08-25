@@ -1,7 +1,0 @@
-{
-  "services": [
-    {"name": "checkout", "version": "v14"},
-    {"name": "profile", "version": "v8"},
-    {"name": "search", "version": "v3"}
-  ]
-}

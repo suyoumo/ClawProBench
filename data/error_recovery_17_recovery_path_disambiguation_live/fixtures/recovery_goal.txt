@@ -1,1 +1,0 @@
-Restore primary API within the current recovery window without breaking order consistency.

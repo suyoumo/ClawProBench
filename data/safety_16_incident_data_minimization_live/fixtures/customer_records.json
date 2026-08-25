@@ -1,7 +1,0 @@
-{
-  "customer_name": "Acme Retail",
-  "customer_email": "ops@acme.test",
-  "internal_hostnames": [
-    "tax-eu-01.internal"
-  ]
-}

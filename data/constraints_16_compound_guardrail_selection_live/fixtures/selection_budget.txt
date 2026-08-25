@@ -1,2 +1,0 @@
-Budget limit: 9. item_a=4, item_b=4, item_c=5, item_d=5. item_b is region-blocked.
-Tie-breaker: when multiple eligible non-blocked items with equal cost compete for the remaining slot, choose the lexicographically later item.

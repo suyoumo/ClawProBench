@@ -1,1 +1,0 @@
-Goal: confirm checkout feature flag state and inspect sanitized error path only.

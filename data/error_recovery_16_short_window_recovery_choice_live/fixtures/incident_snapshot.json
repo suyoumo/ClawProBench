@@ -1,5 +1,0 @@
-{
-  "critical_path": "checkout",
-  "config_regression_detected": true,
-  "data_risk_if_manual_repair": "high"
-}
