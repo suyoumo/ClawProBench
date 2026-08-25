@@ -196,10 +196,14 @@ If you use ClawProBench in your research, please cite:
 
 ```bibtex
 @misc{clawprobench2026,
-  title={ClawProBench — a transparent benchmark for true intelligence in real-world AI agents.},
-  author={suyoumo},
+  title={ClawProBench: Trace-Aware Evaluation of AI Agents with Runtime Coverage and Frozen Workplace-Style Holdouts},
+  author={Xiao, YuanHang},
   year={2026},
-  url={https://github.com/suyoumo/ClawProBench}
+  eprint={2608.22510},
+  archivePrefix={arXiv},
+  primaryClass={cs.AI},
+  url={https://arxiv.org/abs/2608.22510},
+  doi={10.48550/arXiv.2608.22510}
 }
 ```
 
