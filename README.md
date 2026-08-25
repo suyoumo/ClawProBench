@@ -5,6 +5,7 @@
 # ClawProBench
 
 [![Paper](https://img.shields.io/badge/paper-arXiv-B31B1B)](https://arxiv.org/abs/2608.22510)
+[![Dataset](https://img.shields.io/badge/%F0%9F%A4%97-Dataset-yellow)](https://huggingface.co/datasets/xyh110sym/clawprobench)
 [![Active Scenarios](https://img.shields.io/badge/active-102-blue)](#benchmark-profiles)
 [![Catalog](https://img.shields.io/badge/catalog-164-green)](#benchmark-profiles)
 [![Core Profile](https://img.shields.io/badge/core-26-orange)](#benchmark-profiles)
@@ -13,7 +14,8 @@
 
 > Transparent live-first benchmark harness for evaluating model capability inside the OpenClaw runtime. <br>
 > 102 active scenarios, 164 catalog scenarios, deterministic grading, and OpenClaw-native coverage. <br>
-> Paper now on arXiv: [ClawProBench: Trace-Aware Evaluation of AI Agents with Runtime Coverage and Frozen Workplace-Style Holdouts](https://arxiv.org/abs/2608.22510).
+> Paper now on arXiv: [ClawProBench: Trace-Aware Evaluation of AI Agents with Runtime Coverage and Frozen Workplace-Style Holdouts](https://arxiv.org/abs/2608.22510). <br>
+> Dataset available on Hugging Face: [xyh110sym/clawprobench](https://huggingface.co/datasets/xyh110sym/clawprobench).
 
 </div>
 
@@ -65,6 +67,7 @@ release cadence.
 
 ## 📢 Updates
 
+- `v2.0.4` - Released the full 102 active scenarios dataset on [Hugging Face](https://huggingface.co/datasets/xyh110sym/clawprobench), including prompts, fixtures, and scenario configurations for all benchmark-active tasks.
 - `v2.0.3` - Published the ClawProBench paper on arXiv ([2608.22510](https://arxiv.org/abs/2608.22510)) and updated the citation block; added `kimi-k3` leaderboard scores; synced harness code updates (resume model-alias preservation fix); hardened multiple custom checkers with deterministic order-insensitive matchers; and vendored the IronClaw and NanoClaw harness sources to support cross-harness evaluation.
 - `v2.0.2` - Added `agnes-2.0-flash` results to both the ClawProBench open-source and closed-dataset leaderboards. CodeAgentBench also added results for `GLM-5.2`, `Qwen3.7-Max`, `Qwen3.7-Plus`, `MiniMax-M3`, and `step-3.7-flash`.
 - `v2.0.1` - Added closed-dataset scores for `Qwen3.7-Max`, `Gemini 3.1 Pro`, `MiniMax-M3`, and `step-3.7-flash`; added open-source dataset scores for `MiniMax-M3` and `step-3.7-flash`; and introduced the LLMLeadBoard section for the report-sourced benchmark-score leaderboard.
