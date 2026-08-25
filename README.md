@@ -6,8 +6,8 @@
 
 [![Paper](https://img.shields.io/badge/paper-arXiv-B31B1B)](https://arxiv.org/abs/2608.22510)
 [![Dataset](https://img.shields.io/badge/%F0%9F%A4%97-Dataset-yellow)](https://huggingface.co/datasets/xyh110sym/clawprobench)
-[![Clones](https://img.shields.io/badge/clones-918-blue)](https://github.com/suyoumo/ClawProBench)
-[![Views](https://img.shields.io/badge/views-258-green)](https://github.com/suyoumo/ClawProBench)
+[![Clones](https://img.shields.io/badge/clones-459-blue)](https://github.com/suyoumo/ClawProBench)
+[![Views](https://img.shields.io/badge/views-129-green)](https://github.com/suyoumo/ClawProBench)
 [![Active Scenarios](https://img.shields.io/badge/active-102-blue)](#benchmark-profiles)
 [![Catalog](https://img.shields.io/badge/catalog-164-green)](#benchmark-profiles)
 [![Core Profile](https://img.shields.io/badge/core-26-orange)](#benchmark-profiles)
@@ -200,8 +200,8 @@ Benchmark reports are written to `results/`. They are generated runtime artifact
 
 ## Usage Statistics
 
-[![Clones](https://img.shields.io/badge/clones-918-blue)](https://github.com/suyoumo/ClawProBench)
-[![Views](https://img.shields.io/badge/views-258-green)](https://github.com/suyoumo/ClawProBench)
+[![Clones](https://img.shields.io/badge/clones-459-blue)](https://github.com/suyoumo/ClawProBench)
+[![Views](https://img.shields.io/badge/views-129-green)](https://github.com/suyoumo/ClawProBench)
 
 Clones and views are accumulated daily from the GitHub Traffic API. Raw daily data lives in `traffic/traffic.json`.
 

@@ -57,7 +57,7 @@ def load_traffic() -> dict:
 
 def accumulate(existing: dict, new_data: dict, key: str) -> dict:
     """Accumulate new daily data into existing totals."""
-    result = {"total": existing["total"], "uniques": existing["uniques"], "daily": existing["daily"]}
+    result = {"total": existing["total"], "uniques": existing["uniques"], "daily": list(existing["daily"])}
     existing_dates = {d["date"] for d in result["daily"]}
 
     for entry in new_data.get(key, []):
