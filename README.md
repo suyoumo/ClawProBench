@@ -221,7 +221,7 @@ If you use ClawProBench in your research, please cite:
 ```bibtex
 @misc{clawprobench2026,
   title={ClawProBench: Trace-Aware Evaluation of AI Agents with Runtime Coverage and Frozen Workplace-Style Holdouts},
-  author={Xiao, YuanHang},
+  author={YuanHang, Xiao},
   year={2026},
   eprint={2608.22510},
   archivePrefix={arXiv},
