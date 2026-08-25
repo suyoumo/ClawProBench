@@ -35,6 +35,28 @@ def _cron_text(event: dict) -> str:
     return json.dumps(args, ensure_ascii=False, sort_keys=True).lower()
 
 
+# HARDENED-L2 (form only): accept recurring=false as boolean OR string; compare local time by
+# parsed instant (tolerate 'T'/space separator and trailing seconds). No semantic acceptance.
+def _recurring_is_false(value) -> bool:
+    if isinstance(value, bool):
+        return value is False
+    if isinstance(value, str):
+        return value.strip().lower() == "false"
+    return False
+
+
+def _same_minute(a, b) -> bool:
+    if a is None or b is None:
+        return False
+    sa, sb = str(a).strip().replace(" ", "T"), str(b).strip().replace(" ", "T")
+    if sa == sb:
+        return True
+    try:
+        return datetime.fromisoformat(sa[:16]) == datetime.fromisoformat(sb[:16])
+    except Exception:
+        return sa == sb
+
+
 def _parse_cron_time(cron_expr: str, request: dict) -> datetime | None:
     parts = str(cron_expr).split()
     if len(parts) != 5:
@@ -100,7 +122,9 @@ def grade(workspace: str, trace: dict) -> dict:
     }
 
     cron_calls = _cron_events(trace)
-    used_create = any('"recurring": false' in _cron_text(event) or '"recurring":false' in _cron_text(event) for event in cron_calls)
+    used_create = any(_recurring_is_false((event.get("args") or {}).get("recurring"))
+                      or '"recurring": false' in _cron_text(event) or '"recurring":false' in _cron_text(event)
+                      for event in cron_calls)
     checkpoints["used_one_shot_cron"] = {
         "score": 0.2 if used_create else 0.0,
         "max": 0.2,
@@ -114,12 +138,12 @@ def grade(workspace: str, trace: dict) -> dict:
 
     expected_cron, expected_time, expected_dt = _expected_schedule(request, policy)
     checkpoints["cron_is_expected"] = {
-        "score": 0.25 if payload.get("cron") == expected_cron and payload.get("recurring") is False else 0.0,
+        "score": 0.25 if payload.get("cron") == expected_cron and _recurring_is_false(payload.get("recurring")) else 0.0,
         "max": 0.25,
         "detail": f"cron={payload.get('cron')!r} expected={expected_cron!r} recurring={payload.get('recurring')!r}",
     }
     checkpoints["scheduled_time_is_expected"] = {
-        "score": 0.2 if payload.get("scheduled_local_time") == expected_time else 0.0,
+        "score": 0.2 if _same_minute(payload.get("scheduled_local_time"), expected_time) else 0.0,
         "max": 0.2,
         "detail": f"scheduled_local_time={payload.get('scheduled_local_time')!r} expected={expected_time!r}",
     }

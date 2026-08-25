@@ -19,7 +19,7 @@ from harness.benchmark_profiles import (
 from harness.loader import load_scenarios, results_root, summarize_scenarios
 from harness.models import BenchmarkResult
 from harness.reporter import compare_reports, print_comparison, print_summary, reserve_report_path, write_report
-from harness.runner import BenchmarkRunner
+from harness.runner import BenchmarkRunner, _normalize_resume_model
 from harness.scoring import SUPPORTED_CHECK_TYPES
 
 DEFAULT_OPENCLAW_BINARY = os.environ.get("OPENCLAW_BINARY", "openclaw")
@@ -251,7 +251,15 @@ def _run_common(args: argparse.Namespace) -> int:
             existing_result = _load_existing_result(latest)
     existing_report_path = Path(existing_result.summary["report_path"]) if existing_result and existing_result.summary.get("report_path") else None
     preserve_completed_source = bool(existing_result and existing_report_path and _report_is_complete(existing_result))
-    if preserve_completed_source:
+    preserve_model_alias_source = bool(
+        existing_result
+        and existing_report_path
+        and getattr(args, "resume_from", None)
+        and existing_result.model != args.model
+        and _normalize_resume_model(existing_result.model) == _normalize_resume_model(args.model)
+    )
+    preserve_resume_source = preserve_completed_source or preserve_model_alias_source
+    if preserve_resume_source:
         report_path = reserve_report_path(results_dir, args.model)
     else:
         report_path = existing_report_path if existing_report_path else reserve_report_path(results_dir, args.model)
@@ -261,10 +269,11 @@ def _run_common(args: argparse.Namespace) -> int:
             f"reused={len(existing_result.scenarios)} "
             f"path={existing_result.summary.get('report_path', '')}"
         )
-    if preserve_completed_source:
+    if preserve_resume_source:
+        reason = "source_complete=True" if preserve_completed_source else "source_model_alias=True"
         print(
             "resume_checkpoint: "
-            f"source_complete=True preserved={existing_report_path} "
+            f"{reason} preserved={existing_report_path} "
             f"target={report_path}"
         )
     if getattr(args, "rerun_execution_failures", False):

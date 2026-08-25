@@ -43,6 +43,8 @@ ZERO_SCORE_EPSILON = 1e-9
 def _normalize_resume_model(model: str) -> str:
     if model.startswith("siliconflow/Pro/"):
         return "siliconflow/" + model[len("siliconflow/Pro/") :]
+    if model == "baiduqianfan/ernie-4.5-turbo-20260402":
+        return "baiduqianfancodingplan/qianfan-code-latest"
     return model
 
 

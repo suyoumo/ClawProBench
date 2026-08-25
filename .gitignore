@@ -22,3 +22,5 @@ config/*.local.yaml
 
 # Local scratch
 *.tmp
+# ...but keep scenario fixture temp files used by oib5_t19_safety_boundary
+!datasets/oib5/t19_safety_boundary/fixtures/*.tmp

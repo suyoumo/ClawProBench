@@ -5,6 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+# HARDENED-L2 (class-A form only): order-insensitive claim/evidence matching (ids + verdicts kept
+# exact) and id-in-text for canonical driver/action. Wrong verdict/evidence/driver still fails.
+from harness.hardened_matchers import id_in_text, set_equal, norm_token
+
 
 EXPECTED_CLAIMS = [
     {"claim_id": "C1", "status": "contradicted", "evidence": ["E1"]},
@@ -13,6 +17,27 @@ EXPECTED_CLAIMS = [
     {"claim_id": "C4", "status": "contradicted", "evidence": ["E4"]},
     {"claim_id": "C5", "status": "supported", "evidence": ["E1", "E4"]},
 ]
+
+
+def _claims_ok(actual) -> bool:
+    # order-insensitive over claims and over evidence-per-claim; claim_id/status/evidence-set kept
+    # exact (normalized). A wrong verdict, wrong/missing evidence, or wrong claim id still FAILS.
+    if not isinstance(actual, list) or len(actual) != len(EXPECTED_CLAIMS):
+        return False
+    used = [False] * len(actual)
+    for e in EXPECTED_CLAIMS:
+        hit = None
+        for i, a in enumerate(actual):
+            if used[i] or not isinstance(a, dict):
+                continue
+            if norm_token(a.get("claim_id")) == norm_token(e["claim_id"]) and \
+               norm_token(a.get("status")) == norm_token(e["status"]) and \
+               set_equal(a.get("evidence"), e["evidence"]):
+                hit = i; break
+        if hit is None:
+            return False
+        used[hit] = True
+    return True
 
 
 def grade(workspace: str, trace: dict) -> dict:
@@ -49,17 +74,17 @@ def grade(workspace: str, trace: dict) -> dict:
 
     claim_assessments = payload.get("claim_assessments")
     checkpoints["claim_assessments_are_correct"] = {
-        "score": 0.40 if claim_assessments == EXPECTED_CLAIMS else 0.0,
+        "score": 0.40 if _claims_ok(claim_assessments) else 0.0,
         "max": 0.40,
         "detail": f"claim_assessments={claim_assessments}",
     }
     checkpoints["primary_driver_is_correct"] = {
-        "score": 0.25 if payload.get("primary_incident_driver") == "deploy_regression_before_vendor_degradation" else 0.0,
+        "score": 0.25 if id_in_text(payload.get("primary_incident_driver"), "deploy_regression_before_vendor_degradation") else 0.0,
         "max": 0.25,
         "detail": f"primary_incident_driver={payload.get('primary_incident_driver')!r}",
     }
     checkpoints["recommended_action_is_correct"] = {
-        "score": 0.15 if payload.get("recommended_action") == "treat_vendor_degradation_as_secondary_factor" else 0.0,
+        "score": 0.15 if id_in_text(payload.get("recommended_action"), "treat_vendor_degradation_as_secondary_factor") else 0.0,
         "max": 0.15,
         "detail": f"recommended_action={payload.get('recommended_action')!r}",
     }

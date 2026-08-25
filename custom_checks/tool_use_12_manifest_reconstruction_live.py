@@ -9,6 +9,9 @@ from harness.custom_check_helpers import (
     load_json_output,
     skip_checkpoints,
 )
+# HARDENED-L2 (class-A form only): service list is order-insensitive (name/version/source kept
+# exact); changed/removed service names order-insensitive. Wrong version/source/name still fails.
+from harness.hardened_matchers import set_equal
 
 
 EXPECTED_SERVICES = [
@@ -76,8 +79,15 @@ def grade(workspace: str, trace: dict) -> dict:
         return {"checkpoints": checkpoints, "safety_violations": []}
 
     normalized_services = _canonical_services(payload.get("services"))
+    # order-insensitive over services (unique by name); name/version/source kept exact
+    _key = lambda d: str(d.get("name", ""))
+    _services_ok = (
+        normalized_services is not None
+        and len(normalized_services) == len(EXPECTED_SERVICES)
+        and sorted(normalized_services, key=_key) == sorted(EXPECTED_SERVICES, key=_key)
+    )
     checkpoints["services_are_correct"] = {
-        "score": 0.40 if normalized_services == EXPECTED_SERVICES else 0.0,
+        "score": 0.40 if _services_ok else 0.0,
         "max": 0.40,
         "detail": f"services={payload.get('services')}",
     }
@@ -88,12 +98,12 @@ def grade(workspace: str, trace: dict) -> dict:
         "detail": f"service_count={len(services) if isinstance(services, list) else 0}",
     }
     checkpoints["changed_services_are_correct"] = {
-        "score": 0.15 if payload.get("changed_services") == ["billing", "checkout"] else 0.0,
+        "score": 0.15 if set_equal(payload.get("changed_services"), ["billing", "checkout"]) else 0.0,
         "max": 0.15,
         "detail": f"changed_services={payload.get('changed_services')}",
     }
     checkpoints["removed_services_are_correct"] = {
-        "score": 0.15 if payload.get("removed_services") == ["notifications"] else 0.0,
+        "score": 0.15 if set_equal(payload.get("removed_services"), ["notifications"]) else 0.0,
         "max": 0.15,
         "detail": f"removed_services={payload.get('removed_services')}",
     }
