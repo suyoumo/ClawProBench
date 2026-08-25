@@ -203,6 +203,13 @@ Benchmark reports are written to `results/`. They are generated runtime artifact
 [![Clones](https://img.shields.io/badge/clones-459-blue)](https://github.com/suyoumo/ClawProBench)
 [![Views](https://img.shields.io/badge/views-129-green)](https://github.com/suyoumo/ClawProBench)
 
+**Tracking started**: 2026-08-25
+
+| Metric | Total | Unique |
+|--------|-------|--------|
+| Clones | 459 | 82 |
+| Views | 129 | 61 |
+
 Clones and views are accumulated daily from the GitHub Traffic API. Raw daily data lives in `traffic/traffic.json`.
 
 Run `python3 scripts/update_traffic.py` to refresh the statistics.
