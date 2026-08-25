@@ -4,14 +4,16 @@
 
 # ClawProBench
 
+[![Paper](https://img.shields.io/badge/paper-arXiv-B31B1B)](https://arxiv.org/abs/2608.22510)
 [![Active Scenarios](https://img.shields.io/badge/active-102-blue)](#benchmark-profiles)
-[![Catalog](https://img.shields.io/badge/catalog-162-green)](#benchmark-profiles)
+[![Catalog](https://img.shields.io/badge/catalog-164-green)](#benchmark-profiles)
 [![Core Profile](https://img.shields.io/badge/core-26-orange)](#benchmark-profiles)
 [![Execution](https://img.shields.io/badge/execution-live--first-black)](#quick-start)
 [![License](https://img.shields.io/badge/license-Apache%202.0-red)](LICENSE)
 
 > Transparent live-first benchmark harness for evaluating model capability inside the OpenClaw runtime. <br>
-> 102 active scenarios, 162 catalog scenarios, deterministic grading, and OpenClaw-native coverage.
+> 102 active scenarios, 164 catalog scenarios, deterministic grading, and OpenClaw-native coverage. <br>
+> Paper now on arXiv: [ClawProBench: Trace-Aware Evaluation of AI Agents with Runtime Coverage and Frozen Workplace-Style Holdouts](https://arxiv.org/abs/2608.22510).
 
 </div>
 
@@ -21,7 +23,7 @@
 
 ClawProBench focuses on real OpenClaw execution with deterministic grading, structured reports, and benchmark-profile selection. The default ranking path is the `core` profile; broader active coverage remains available through `intelligence`, `coverage`, `native`, and `full`.
 
-The current worktree inventory reports `102` active scenarios and `162` total catalog scenarios (`60` incubating) via `python3 run.py inventory --json` and `python3 run.py inventory --benchmark-status all --json`.
+The current worktree inventory reports `102` active scenarios and `164` total catalog scenarios (`62` incubating) via `python3 run.py inventory --json` and `python3 run.py inventory --benchmark-status all --json`.
 
 ## Leaderboard
 
@@ -63,6 +65,7 @@ release cadence.
 
 ## 📢 Updates
 
+- `v2.0.3` - Published the ClawProBench paper on arXiv ([2608.22510](https://arxiv.org/abs/2608.22510)) and updated the citation block; added `kimi-k3` leaderboard scores; synced harness code updates (resume model-alias preservation fix); hardened multiple custom checkers with deterministic order-insensitive matchers; and vendored the IronClaw and NanoClaw harness sources to support cross-harness evaluation.
 - `v2.0.2` - Added `agnes-2.0-flash` results to both the ClawProBench open-source and closed-dataset leaderboards. CodeAgentBench also added results for `GLM-5.2`, `Qwen3.7-Max`, `Qwen3.7-Plus`, `MiniMax-M3`, and `step-3.7-flash`.
 - `v2.0.1` - Added closed-dataset scores for `Qwen3.7-Max`, `Gemini 3.1 Pro`, `MiniMax-M3`, and `step-3.7-flash`; added open-source dataset scores for `MiniMax-M3` and `step-3.7-flash`; and introduced the LLMLeadBoard section for the report-sourced benchmark-score leaderboard.
 - `v2.0.0` - Released the closed-dataset leaderboard with `33` model results; added clickable closed-dataset model detail pages, closed-dataset visualization charts, and closed-dataset task browsing in `Tasks`.
@@ -168,7 +171,7 @@ For isolated same-host runs, the harness also supports:
 | `native` | 36 | Active OpenClaw-native slice only |
 | `full` | 102 | Union of all active scenarios |
 
-The benchmark catalog also includes `60` incubating scenarios that can be inspected with `--benchmark-status all`.
+The benchmark catalog also includes `62` incubating scenarios that can be inspected with `--benchmark-status all`.
 
 ## OpenClaw Runtime
 
@@ -218,7 +221,3 @@ This project was informed by prior open-source work on agent evaluation, benchma
 We drew ideas from projects such as PinchBench, Claw-Eval, AgencyBench, and related agent-benchmark efforts, especially in areas like task design, evaluation methodology, harness structure, and public benchmark presentation.
 
 Some tasks in this repository are adapted and reworked from earlier public benchmark-style task sets into the OpenClaw runtime and grading framework.
-
-## Contributors
-
-Public contributor list: waiting.

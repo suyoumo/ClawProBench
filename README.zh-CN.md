@@ -4,14 +4,16 @@
 
 # ClawProBench
 
+[![论文](https://img.shields.io/badge/paper-arXiv-B31B1B)](https://arxiv.org/abs/2608.22510)
 [![活跃场景](https://img.shields.io/badge/active-102-blue)](#基准配置)
-[![场景目录](https://img.shields.io/badge/catalog-162-green)](#基准配置)
+[![场景目录](https://img.shields.io/badge/catalog-164-green)](#基准配置)
 [![核心配置](https://img.shields.io/badge/core-26-orange)](#基准配置)
 [![执行方式](https://img.shields.io/badge/execution-live--first-black)](#快速开始)
 [![许可证](https://img.shields.io/badge/license-Apache%202.0-red)](LICENSE)
 
 > 面向 OpenClaw 真实运行时的透明 live-first 模型能力评测框架。<br>
-> 102 个活跃场景，162 个目录场景，确定性评分，并原生覆盖 OpenClaw 工作流。
+> 102 个活跃场景，164 个目录场景，确定性评分，并原生覆盖 OpenClaw 工作流。<br>
+> 论文已发布于 arXiv：[ClawProBench: Trace-Aware Evaluation of AI Agents with Runtime Coverage and Frozen Workplace-Style Holdouts](https://arxiv.org/abs/2608.22510)。
 
 </div>
 
@@ -21,7 +23,7 @@
 
 ClawProBench 专注于真实 OpenClaw 执行，提供确定性评分、结构化报告和基准配置选择。默认排名路径是 `core` 配置；更广的活跃覆盖仍可通过 `intelligence`、`coverage`、`native` 和 `full` 使用。
 
-当前工作区清单通过 `python3 run.py inventory --json` 和 `python3 run.py inventory --benchmark-status all --json` 统计到 `102` 个活跃场景和 `162` 个总目录场景，其中 `60` 个为 incubating 状态。
+当前工作区清单通过 `python3 run.py inventory --json` 和 `python3 run.py inventory --benchmark-status all --json` 统计到 `102` 个活跃场景和 `164` 个总目录场景，其中 `62` 个为 incubating 状态。
 
 ## 排行榜
 
@@ -56,6 +58,7 @@ LLMLeadBoard 是与 ClawProBench 同属一个 leaderboard family 的报告来源
 
 ## 📢 更新
 
+- `v2.0.3` - ClawProBench 论文已发布至 arXiv（[2608.22510](https://arxiv.org/abs/2608.22510)），引用信息已同步更新；新增 `kimi-k3` 榜单分数；同步 harness 代码更新（resume 模型别名保留修复）；使用确定性乱序不敏感匹配器加固了多个自定义 checker；并入 IronClaw 与 NanoClaw harness 源码，支持跨 harness 评估。
 - `v2.0.2` - ClawProBench 开源数据集和闭源数据集均新增 `agnes-2.0-flash` 的结果。CodeAgentBench 新增 `GLM-5.2`、`Qwen3.7-Max`、`Qwen3.7-Plus`、`MiniMax-M3` 和 `step-3.7-flash` 的结果。
 - `v2.0.1` - 闭源数据集新增 `Qwen3.7-Max`、`Gemini 3.1 Pro`、`MiniMax-M3` 和 `step-3.7-flash` 的分数；开源数据集新增 `MiniMax-M3` 和 `step-3.7-flash` 的分数；并新增 LLMLeadBoard 介绍区块，用于说明这个基于公开模型报告汇总 benchmark 分数的榜单。
 - `v2.0.0` - 新增闭源榜单，发布 `33` 个模型的闭源数据集结果；支持点击闭源榜单模型查看模型详情，支持闭源榜单可视化图表查看，并支持在 `Tasks` 中查看闭源数据集任务。
@@ -161,7 +164,7 @@ python3 run.py compare --results-dir results
 | `native` | 36 | 仅活跃 OpenClaw 原生任务切片 |
 | `full` | 102 | 所有活跃场景的并集 |
 
-benchmark 目录还包含 `60` 个 incubating 场景，可通过 `--benchmark-status all` 查看。
+benchmark 目录还包含 `62` 个 incubating 场景，可通过 `--benchmark-status all` 查看。
 
 ## OpenClaw 运行时
 
@@ -211,7 +214,3 @@ Benchmark 报告会写入 `results/`。这些是运行时生成产物，在当�
 我们借鉴了 PinchBench、Claw-Eval、AgencyBench 以及相关 agent-benchmark 项目的思路，尤其是在任务设计、评估方法、harness 结构和公开 benchmark 呈现方面。
 
 本仓库中的部分任务由早期公开 benchmark 风格任务集改编并重构，以适配 OpenClaw 运行时和评分框架。
-
-## 贡献者
-
-公开贡献者列表：等待中。
