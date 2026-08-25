@@ -2,24 +2,30 @@
 """Fetch GitHub traffic data and accumulate into traffic/traffic.json."""
 
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
 REPO = "suyoumo/ClawProBench"
-TRAFFIC_FILE = Path(__file__).resolve().parents[1] / "traffic" / "traffic.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+TRAFFIC_FILE = PROJECT_ROOT / "traffic" / "traffic.json"
+README_FILE = PROJECT_ROOT / "README.md"
 
 
 def get_token() -> str:
-    """Get GitHub token from git config."""
+    """Get GitHub token from env or git config."""
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if token:
+        return token
     result = subprocess.run(
         ["git", "config", "--global", "github.token"],
         capture_output=True, text=True
     )
     token = result.stdout.strip()
     if not token:
-        print("Error: No GitHub token found. Run: git config --global github.token <token>")
+        print("Error: No GitHub token found. Set GITHUB_TOKEN env or run: git config --global github.token <token>")
         sys.exit(1)
     return token
 
@@ -79,6 +85,23 @@ def format_count(n: int) -> str:
     return str(n)
 
 
+def update_readme_badges(traffic: dict) -> None:
+    """Update Clones and Views badges in README.md."""
+    if not README_FILE.exists():
+        return
+
+    content = README_FILE.read_text()
+    clones_badge = f"[![Clones](https://img.shields.io/badge/clones-{format_count(traffic['clones']['total'])}-blue)](https://github.com/{REPO})"
+    views_badge = f"[![Views](https://img.shields.io/badge/views-{format_count(traffic['views']['total'])}-green)](https://github.com/{REPO})"
+
+    # Replace old badges with new ones
+    import re
+    content = re.sub(r'\[!\[Clones\]\(https://img\.shields\.io/badge/clones-[^)]+\)\]\([^)]+\)', clones_badge, content)
+    content = re.sub(r'\[!\[Views\]\(https://img\.shields\.io/badge/views-[^)]+\)\]\([^)]+\)', views_badge, content)
+
+    README_FILE.write_text(content)
+
+
 def main():
     token = get_token()
 
@@ -98,10 +121,14 @@ def main():
     with open(TRAFFIC_FILE, "w") as f:
         json.dump(traffic, f, indent=2)
 
+    # Update README badges
+    update_readme_badges(traffic)
+
     print(f"Updated traffic data:")
     print(f"  Clones: {format_count(traffic['clones']['total'])} ({traffic['clones']['uniques']} unique)")
     print(f"  Views:  {format_count(traffic['views']['total'])} ({traffic['views']['uniques']} unique)")
     print(f"  Data saved to {TRAFFIC_FILE}")
+    print(f"  README badges updated")
 
 
 if __name__ == "__main__":
