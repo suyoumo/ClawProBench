@@ -1,0 +1,91 @@
+name: Nightly Deep CI
+
+# The legacy v1 suite (.github/workflows/test.yml) is deliberately NOT
+# invoked here: v1 (src/) is frozen pending removal ("Clean up old
+# architecture" roadmap), so its deep suite is paused rather than spending
+# nightly compute on retired code. Note the consequence: test.yml is the
+# ONLY place the root `ironclaw` package's tests run, so until src/ is
+# deleted, a v1 bug fix that must land should temporarily restore the
+# `deterministic-deep-tests` call job (git log this file for the removed
+# block). This is an explicit freeze, not the silent-death failure mode
+# this workflow's history is infamous for.
+#
+# Cross-cutting platform and compatibility coverage is reused from
+# .github/workflows/platform-and-compat.yml:
+# - WASM/WIT compatibility checks
+# - Windows compile matrix
+# - benchmark compilation
+# - Docker image compilation remains disabled here via include_docker: false
+#
+# The Reborn binary suites are reused the same way:
+# - .github/workflows/reborn-tests.yml: per-crate tests across the Reborn
+#   crate families plus the partitioned root parity tests (with
+#   event_name == schedule, scope detection short-circuits to full scope)
+# - .github/workflows/reborn-e2e.yml: deterministic Rust contract gate
+#   (architecture/runtimes/substrates) plus gateway and WebUI v2 smoke
+#   (workflow_call bypasses the PR path filters, so the full gate runs)
+#
+# Docker is intentionally excluded here because QA/release Docker images are
+# owned by the separate Docker pipeline and need release-team alignment.
+# Full browser E2E is scheduled separately by .github/workflows/e2e.yml.
+
+on:
+  schedule:
+    - cron: "0 4 * * *" # Daily deterministic deep CI at 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-deep-ci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  platform-and-compat:
+    name: Platform & Compat
+    uses: ./.github/workflows/platform-and-compat.yml
+    # The called workflow's version-check job declares job-level
+    # `pull-requests: read` + `issues: read`. A called workflow may not
+    # request more than the caller grants, and that is validated at trigger
+    # time even though the job itself is event-gated off schedule runs — the
+    # caller must grant the superset or the whole run is a startup_failure
+    # with zero jobs.
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    secrets: inherit
+    with:
+      ref: ${{ github.sha }}
+      include_docker: false
+
+  reborn-tests:
+    name: Reborn Tests
+    uses: ./.github/workflows/reborn-tests.yml
+    # Two call-contract requirements, both validated at trigger time; a
+    # violation turns the whole nightly run into a startup_failure with ZERO
+    # jobs — including nightly-alert, so nothing reports it. This workflow
+    # had no successful run from its creation (2026-05-06) through 2026-07-08
+    # (65 of 74 retained runs are startup_failures) because of stacked
+    # violations of exactly these rules:
+    # 1. The called workflow's coverage-report job declares job-level
+    #    `pull-requests: write`; the caller must grant it.
+    # 2. reborn-tests.yml references secrets.SCCACHE_*; the caller must pass
+    #    secrets (`secrets: inherit`).
+    permissions:
+      contents: read
+      pull-requests: write
+    secrets: inherit
+    with:
+      ref: ${{ github.sha }}
+
+  reborn-e2e:
+    name: Reborn E2E
+    uses: ./.github/workflows/reborn-e2e.yml
+    with:
+      ref: ${{ github.sha }}
+
+# Failure reporting: nightly-watchdog.yml checks this workflow's latest
+# scheduled run from outside and posts failures to Slack. An in-run alert
+# job cannot do that — it dies with its own run on a startup_failure.

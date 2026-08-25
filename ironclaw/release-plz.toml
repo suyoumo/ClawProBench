@@ -1,0 +1,22 @@
+[workspace]
+# GitHub Releases are created by cargo-dist (release.yml), not release-plz.
+# release-plz only creates git tags and publishes to crates.io.
+git_release_enable = false
+
+# ── Main binary ─────────────────────────────────────────────
+# Not published to crates.io. Still create git tags so cargo-dist builds
+# binaries and creates GitHub Releases.
+[[package]]
+name = "ironclaw"
+publish = false
+
+# ── Internal crates (not useful standalone) ─────────────────
+[[package]]
+name = "ironclaw_tui"
+publish = false
+release = false
+
+[[package]]
+name = "ironclaw_gateway"
+publish = false
+release = false

@@ -1,0 +1,65 @@
+[advisories]
+unmaintained = "workspace"
+yanked = "deny"
+ignore = [
+    # Pre-existing advisories — tracked for upgrade in separate PRs
+    # tokio-tar PAX header parsing — sandbox containers only
+    "RUSTSEC-2025-0111",
+    # rustls-webpki advisories — 0.102.8 remains pinned by a libsql 0.9.30 transitive dep
+    # (via rustls 0.22 → hyper-rustls 0.25); keep ignored until that pin is gone.
+    # RUSTSEC-2026-0104: panic on empty `onlySomeReasons` BIT STRING during CRL parsing.
+    # We do not use CRLs, and the advisory explicitly notes apps that don't parse CRLs
+    # are unaffected. Same transitive pin as 0049/0098/0099 — tracked with them.
+    "RUSTSEC-2026-0049",
+    "RUSTSEC-2026-0098",
+    "RUSTSEC-2026-0099",
+    "RUSTSEC-2026-0104",
+    # rsa Marvin timing side-channel — test-only dependency used to mint
+    # throwaway local OIDC JWT fixtures; no production network-observable
+    # private-key operation is exposed by this dependency.
+    "RUSTSEC-2023-0071",
+]
+
+[licenses]
+version = 2
+private = { ignore = true }
+allow = [
+    "MIT",
+    # MIT-0 (MIT No Attribution) is strictly more permissive than MIT —
+    # required by `jsonschema` (used for workspace document schema validation).
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "OpenSSL",
+    "Zlib",
+    "MPL-2.0",
+    "0BSD",
+    "BSL-1.0",
+    "CC0-1.0",
+    "Unlicense",
+    "CDLA-Permissive-2.0",
+]
+unused-allowed-license = "allow"
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# monty (Pydantic's embedded Python) is git-only (not on crates.io),
+# so it inherently lacks a version constraint. Allow path-dep wildcards.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = [
+    # Monty (Pydantic's embedded Python interpreter) — not yet on crates.io.
+    # Pulls in ruff_* crates from samuelcolvin/ruff at a pinned revision.
+    "https://github.com/pydantic/monty.git",
+    "https://github.com/samuelcolvin/ruff.git",
+]

@@ -1,0 +1,39 @@
+{
+  "name": "feishu",
+  "display_name": "Feishu / Lark Channel",
+  "kind": "channel",
+  "version": "0.2.2",
+  "wit_version": "0.3.0",
+  "description": "Talk to your agent through a Feishu or Lark bot",
+  "keywords": [
+    "messaging",
+    "bot",
+    "chat",
+    "feishu",
+    "lark"
+  ],
+  "source": {
+    "dir": "channels-src/feishu",
+    "capabilities": "feishu.capabilities.json",
+    "crate_name": "feishu-channel"
+  },
+  "artifacts": {
+    "wasm32-wasip2": {
+      "sha256": "edddd28d478a73add695315b99485cfb00656e1682b1f45e6f3a0a90c56e5378",
+      "url": "https://github.com/nearai/ironclaw/releases/download/ironclaw-v0.26.0/channel-feishu-0.2.2-wasm32-wasip2.tar.gz"
+    }
+  },
+  "auth_summary": {
+    "method": "manual",
+    "provider": "Feishu / Lark",
+    "secrets": [
+      "feishu_app_id",
+      "feishu_app_secret"
+    ],
+    "shared_auth": null,
+    "setup_url": "https://open.feishu.cn/app"
+  },
+  "tags": [
+    "messaging"
+  ]
+}
